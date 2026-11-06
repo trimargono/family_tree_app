@@ -24,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     setState(() => _isLoading = true);
+    
     try {
       await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
@@ -42,6 +43,12 @@ class _RegisterPageState extends State<RegisterPage> {
           SnackBar(content: Text('Gagal Mendaftar: ${e.message}'), backgroundColor: Colors.red),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -49,8 +56,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 800;
+
     return Scaffold(
-      // 1. LATAR BELAKANG GELAP (Sama seperti halaman Login)
+      // Latar belakang gelap elegan
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -63,9 +73,8 @@ class _RegisterPageState extends State<RegisterPage> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 500), // Lebih ramping untuk form daftar
-              
-              // 2. EFEK LIGHTING / GLOW
+              constraints: const BoxConstraints(maxWidth: 1000),
+              // Efek Glow Hijau
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
@@ -76,97 +85,152 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
               ),
-
               child: Card(
                 elevation: 0,
-                color: Colors.white, // Form daftar full putih
+                color: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                   side: BorderSide(color: const Color(0xFF4CAF50).withOpacity(0.5), width: 2),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 50),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                clipBehavior: Clip.antiAlias, 
+                child: IntrinsicHeight(
+                  child: Row(
                     children: [
-                      // LOGO & JUDUL
-                      Image.asset(
-                        'assets/Logo SiTRAH.png', // Menggunakan logo yang sama
-                        height: 70,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.person_add_alt_1, size: 70, color: Color(0xFF2E7D32),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'DAFTAR AKUN',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
-                      ),
-                      const Text(
-                        'Bergabunglah dengan silsilah keluarga',
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 40),
-
-                      // FORM EMAIL
-                      TextField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // FORM PASSWORD
-                                            // FORM PASSWORD
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Password (Minimal 6 Karakter)',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          // Tambahkan tombol ikon mata di kanan
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        obscureText: _obscurePassword, // Gunakan variabel
-                      ),
-
-                      // TOMBOL DAFTAR
-                      _isLoading
-                          ? const CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _signUp,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size.fromHeight(50),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      // ================= BAGIAN KIRI: GAMBAR (Hanya di Desktop) =================
+                      if (isDesktop)
+                        Expanded(
+                          flex: 1,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                'assets/Logo SiTrah.png', // Menggunakan gambar yang sama
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  color: const Color(0xFF1B5E20),
+                                  child: const Center(
+                                    child: Icon(Icons.family_restroom, size: 150, color: Colors.white),
+                                  ),
+                                ),
                               ),
-                              child: const Text('DAFTAR SEKARANG', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                      
-                      const SizedBox(height: 20),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                                  ),
+                                ),
+                              ),
+                              const Positioned(
+                                bottom: 40,
+                                left: 20,
+                                right: 20,
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Bergabunglah',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'Abadikan silsilah keluarga Anda.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 16, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
-                      // TOMBOL KEMBALI KE LOGIN
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // Kembali ke halaman Login
-                        },
-                        child: const Text('Sudah punya akun? Kembali ke Login'),
-                      )
+                      // ================= BAGIAN KANAN: FORM REGISTER =================
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/Logo SiTRAH.png',
+                                height: 70,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const Icon(
+                                  Icons.person_add_alt_1, size: 70, color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'DAFTAR AKUN',
+                                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                              ),
+                              const Text(
+                                'Bergabunglah dengan silsilah keluarga',
+                                style: TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 40),
+
+                              TextField(
+                                controller: _emailController,
+                                decoration: InputDecoration(
+                                  labelText: 'Email',
+                                  prefixIcon: const Icon(Icons.email_outlined),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              TextField(
+                                controller: _passwordController,
+                                decoration: InputDecoration(
+                                  labelText: 'Password (Minimal 6 Karakter)',
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                obscureText: _obscurePassword,
+                              ),
+                              const SizedBox(height: 24),
+
+                              _isLoading
+                                  ? const CircularProgressIndicator()
+                                  : ElevatedButton(
+                                      onPressed: _signUp,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF2E7D32),
+                                        foregroundColor: Colors.white,
+                                        minimumSize: const Size.fromHeight(50),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: const Text('DAFTAR SEKARANG', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    ),
+                              
+                              const SizedBox(height: 16),
+
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Kembali ke halaman Login
+                                },
+                                child: const Text('Sudah punya akun? Kembali ke Login'),
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

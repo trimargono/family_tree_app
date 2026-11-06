@@ -15,9 +15,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<FamilyMember> _familyMembers = [];
   bool _loading = true;
-  
-  final Map<String, String?> _avatarUrls = {};
-  final Map<String, String> _fullNames = {};
 
   bool get _isAdmin => Supabase.instance.client.auth.currentUser?.email == 'cek@keluarga.com';
 
@@ -29,27 +26,34 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadTree() async {
     try {
-      final data = await Supabase.instance.client.from('members').select();
+      // KUNCI PERBAIKAN: Kita urutkan berdasarkan 'id' dari database sejak awal
+      final data = await Supabase.instance.client
+          .from('members')
+          .select()
+          .order('id', ascending: true); 
       
       final Map<String, Map<String, dynamic>> rawData = {
         for (var row in data) row['id'].toString(): row
       };
 
-      _avatarUrls.clear();
-      _fullNames.clear();
-      for (var row in data) {
-        _avatarUrls[row['id'].toString()] = row['avatar_url'];
-        _fullNames[row['id'].toString()] = row['name'] ?? '';
-      }
+      int hitungGenerasi(String id, Map<String, Map<String, dynamic>> dataMap, [Set<String>? visited]) {
+        visited ??= {};
+        if (visited.contains(id)) return 1; 
+        visited.add(id);
 
-      int hitungGenerasi(String id, Map<String, Map<String, dynamic>> dataMap) {
         var member = dataMap[id];
         if (member == null) return 1;
+        
         if (member['father_id'] != null) {
-          return hitungGenerasi(member['father_id'].toString(), dataMap) + 1;
+          return hitungGenerasi(member['father_id'].toString(), dataMap, visited) + 1;
         } else if (member['mother_id'] != null) {
-          return hitungGenerasi(member['mother_id'].toString(), dataMap) + 1;
+          return hitungGenerasi(member['mother_id'].toString(), dataMap, visited) + 1;
         }
+        
+        if (member['spouse_id'] != null) {
+           return hitungGenerasi(member['spouse_id'].toString(), dataMap, visited);
+        }
+        
         return 1; 
       }
 
@@ -60,14 +64,16 @@ class _HomePageState extends State<HomePage> {
         if (row['mother_id'] != null) parentIds.add(row['mother_id'].toString());
         
         String namaAsli = row['name'] ?? '';
-        
+        String namaTampil = namaAsli.length > 15 ? '${namaAsli.substring(0, 13)}...' : namaAsli;
+
         return FamilyMember(
           id: id,
-          name: namaAsli, 
+          name: namaTampil, 
           gender: row['gender'] == 'female' ? Gender.female : Gender.male,
           generation: hitungGenerasi(id, rawData), 
           parentIds: parentIds,
           spouseIds: row['spouse_id'] != null ? [row['spouse_id'].toString()] : [],
+          avatar: row['avatar_url'], 
         );
       }).toList();
 
@@ -126,87 +132,23 @@ class _HomePageState extends State<HomePage> {
                     selectionColor: Colors.deepPurple,
                     selectionWidth: 4,
                   ),
-                  // ==== KUSTOMISASI NODE (FOTO + NAMA + KLIK) ====
-                  familyNodeBuilder: (context, member, state) {
-                    final avatarUrl = _avatarUrls[member.id];
-                    String fullName = _fullNames[member.id] ?? '';
-                    String displayName = fullName.length > 10 ? '${fullName.substring(0, 8)}...' : fullName;
-
-                    return GestureDetector(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetailMemberPage(memberId: member.id),
-                          ),
-                        );
-                        if (result == true) {
-                          setState(() {
-                            _familyMembers.clear();
-                            _loading = true;
-                          });
-                          await _loadTree();
-                        }
-                      },
-                      // KUNCI: Kita gunakan ukuran spesifik (80x80) agar sesuai dengan library
-                      child: SizedBox(
-                        width: 80,
-                        height: 80,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Foto Lingkaran
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: state.isSelected ? Colors.deepPurple : Colors.grey.shade300,
-                                  width: state.isSelected ? 3 : 1,
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                radius: 22,
-                                backgroundColor: Colors.grey.shade200,
-                                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty 
-                                    ? NetworkImage(avatarUrl) 
-                                    : null,
-                                child: avatarUrl == null || avatarUrl.isEmpty
-                                    ? Icon(
-                                        member.gender == Gender.female ? Icons.female : Icons.male,
-                                        size: 26,
-                                        color: Colors.grey.shade600,
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            // Nama di bawah foto (posisi diatur agar tidak menutupi garis)
-                            Positioned(
-                              bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  displayName,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                  familyNodeStyle: FamilyNodeStyle.circleAvatar, 
+                  onMemberTap: (member) async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailMemberPage(memberId: member.id),
                       ),
                     );
+                    
+                    if (result == true) {
+                      setState(() {
+                        _familyMembers.clear();
+                        _loading = true;
+                      });
+                      await _loadTree();
+                    }
                   },
-                  onMemberTap: (member) {},
                 ),
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
