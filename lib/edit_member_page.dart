@@ -24,7 +24,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _members = [];
 
-  // Variabel untuk menyimpan foto baru
   Uint8List? _imageBytes;
   String? _imageName;
 
@@ -48,7 +47,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
     });
   }
 
-  // Fungsi untuk memilih gambar baru
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -73,9 +71,8 @@ class _EditMemberPageState extends State<EditMemberPage> {
     setState(() => _isLoading = true);
     
     try {
-      String? uploadedUrl = widget.memberData['avatar_url']; // Gunakan URL lama sebagai default
+      String? uploadedUrl = widget.memberData['avatar_url']; 
 
-      // Jika ada gambar baru yang dipilih, unggah ke Supabase Storage
       if (_imageBytes != null && _imageName != null) {
         final fileExt = _imageName!.split('.').last;
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
@@ -84,11 +81,9 @@ class _EditMemberPageState extends State<EditMemberPage> {
             .from('avatars')
             .uploadBinary(fileName, _imageBytes!);
             
-        // Dapatkan URL publik gambar baru
         uploadedUrl = Supabase.instance.client.storage.from('avatars').getPublicUrl(fileName);
       }
 
-      // Update data ke database (termasuk URL foto yang baru)
       await Supabase.instance.client.from('members').update({
         'name': _nameController.text.trim(),
         'gender': _selectedGender,
@@ -96,7 +91,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
         'father_id': _selectedFatherId != null ? int.parse(_selectedFatherId!) : null,
         'mother_id': _selectedMotherId != null ? int.parse(_selectedMotherId!) : null,
         'spouse_id': _selectedSpouseId != null ? int.parse(_selectedSpouseId!) : null,
-        'avatar_url': uploadedUrl, // Simpan URL foto
+        'avatar_url': uploadedUrl, 
       }).eq('id', widget.memberData['id']);
 
       if (mounted) {
@@ -118,7 +113,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Tentukan gambar mana yang akan ditampilkan (foto baru atau foto lama)
     ImageProvider? currentImage;
     if (_imageBytes != null) {
       currentImage = MemoryImage(_imageBytes!);
@@ -160,7 +154,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
                   children: [
-                    // ==== AREA UPLOAD/GANTI FOTO ====
                     GestureDetector(
                       onTap: _pickImage,
                       child: CircleAvatar(
@@ -212,14 +205,15 @@ class _EditMemberPageState extends State<EditMemberPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ==== DROPDOWN AYAH ====
+                    // ==== DROPDOWN AYAH (DIPERBAIKI) ====
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: 'Pilih Ayah (Opsional)',
                         prefixIcon: const Icon(Icons.man),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      value: _selectedFatherId,
+                      // Cek apakah ID ada di daftar. Jika tidak, set null agar tidak error.
+                      value: _members.any((m) => m['id'].toString() == _selectedFatherId) ? _selectedFatherId : null,
                       items: [
                         const DropdownMenuItem(value: '', child: Text('- Kosongkan -', style: TextStyle(fontStyle: FontStyle.italic))),
                         ..._members.where((m) => m['gender'] == 'male' && m['id'].toString() != widget.memberData['id'].toString())
@@ -229,14 +223,14 @@ class _EditMemberPageState extends State<EditMemberPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ==== DROPDOWN IBU ====
+                    // ==== DROPDOWN IBU (DIPERBAIKI) ====
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: 'Pilih Ibu (Opsional)',
                         prefixIcon: const Icon(Icons.woman),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      value: _selectedMotherId,
+                      value: _members.any((m) => m['id'].toString() == _selectedMotherId) ? _selectedMotherId : null,
                       items: [
                         const DropdownMenuItem(value: '', child: Text('- Kosongkan -', style: TextStyle(fontStyle: FontStyle.italic))),
                         ..._members.where((m) => m['gender'] == 'female' && m['id'].toString() != widget.memberData['id'].toString())
@@ -246,14 +240,14 @@ class _EditMemberPageState extends State<EditMemberPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ==== DROPDOWN PASANGAN ====
+                    // ==== DROPDOWN PASANGAN (DIPERBAIKI) ====
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: 'Pilih Pasangan (Opsional)',
                         prefixIcon: const Icon(Icons.favorite),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      value: _selectedSpouseId,
+                      value: _members.any((m) => m['id'].toString() == _selectedSpouseId) ? _selectedSpouseId : null,
                       items: [
                         const DropdownMenuItem(value: '', child: Text('- Kosongkan -', style: TextStyle(fontStyle: FontStyle.italic))),
                         ..._members.where((m) => m['id'].toString() != widget.memberData['id'].toString())
